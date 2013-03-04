@@ -2549,6 +2549,8 @@ int  remove_job(
   int rc = PBSE_NONE;
   int index;
   char log_buf[LOCAL_LOG_BUF_SIZE];
+  int mrc = 0;
+  useconds_t usec = 1;
 
   if (LOGLEVEL >= 10)
     log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, __func__, pjob->ji_qs.ji_jobid);
@@ -2557,8 +2559,21 @@ int  remove_job(
   if (rc != 0)
     {
     unlock_ji_mutex(pjob, __func__, "1", LOGLEVEL);
-    lock_alljobs_mutex(aj, __func__, NULL, LOGLEVEL);
-    lock_ji_mutex(pjob, __func__, NULL, LOGLEVEL);
+    while(TRUE)
+      {
+      lock_alljobs_mutex(aj, __func__, NULL, LOGLEVEL);
+      rc = lock_ji_mutex_timed(pjob, __func__, NULL, LOGLEVEL);
+      if (rc == PBSE_MUTEXTIMED)
+        {
+        unlock_alljobs_mutex(aj, __func__, NULL, LOGLEVEL);
+        usleep(usec);
+        usec *= 2;
+        if (usec > 2000000)
+          usec = 2000000;
+        continue;
+        }
+      break;
+      }
 
     if (LOGLEVEL >= 7)
       {

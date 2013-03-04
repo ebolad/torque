@@ -2887,6 +2887,52 @@ int lock_ji_mutex(
   }
 
 
+int lock_ji_mutex_timed(
+
+  job        *pjob,
+  const char *id,
+  char       *msg,
+  int        logging)
+  {
+  int rc = PBSE_NONE;
+  char *err_msg = NULL;
+  char stub_msg[] = "no pos";
+  int mrc = 0;
+  struct timespec abs_time;
+
+  if (logging >= 10)
+    {
+    err_msg = (char *)calloc(1, MSG_LEN_LONG);
+    if (msg == NULL)
+      msg = stub_msg;
+    snprintf(err_msg, MSG_LEN_LONG, "locking %s in method %s-%s", pjob->ji_qs.ji_jobid, id, msg);
+    log_record(PBSEVENT_DEBUG, PBS_EVENTCLASS_NODE, id, err_msg);
+    }
+
+  clock_gettime(CLOCK_REALTIME, &abs_time);
+  abs_time.tv_nsec += 10 * 1000000;
+  mrc = pthread_mutex_timedlock(pjob->ji_mutex, &abs_time);
+  if (mrc == ETIMEDOUT)
+    {
+      rc = PBSE_MUTEXTIMED;
+    }
+  if (mrc != 0)
+    {
+    if (logging >= 10)
+      {
+      snprintf(err_msg, MSG_LEN_LONG, "ALERT: cannot lock job %s mutex in method %s",
+                                   pjob->ji_qs.ji_jobid, id);
+      log_record(PBSEVENT_DEBUG, PBS_EVENTCLASS_NODE, id, err_msg);
+      }
+    rc = PBSE_MUTEX;
+    }
+
+  if (err_msg != NULL)
+  free(err_msg);
+
+  return rc;
+  }
+
 
 int unlock_ji_mutex(
 
@@ -2947,6 +2993,52 @@ int lock_ai_mutex(
     }
 
   if (pthread_mutex_lock(pa->ai_mutex) != 0)
+    {
+    if (logging >= 10)
+      {
+      snprintf(err_msg, MSG_LEN_LONG, "ALERT: cannot lock job array %s mutex in method %s",
+                                   pa->ai_qs.parent_id, id);
+      log_record(PBSEVENT_DEBUG, PBS_EVENTCLASS_NODE, id, err_msg);
+      }
+    rc = PBSE_MUTEX;
+    }
+
+  if (err_msg != NULL)
+  free(err_msg);
+
+  return rc;
+  }
+
+int lock_ai_mutex_timed(
+
+  job_array  *pa,
+  const char *id,
+  char       *msg,
+  int        logging)
+  {
+  int rc = PBSE_NONE;
+  char *err_msg = NULL;
+  char stub_msg[] = "no pos";
+  int mrc = 0;
+  struct timespec abs_time;
+
+  if (logging >= 10)
+    {
+    err_msg = (char *)calloc(1, MSG_LEN_LONG);
+    if (msg == NULL)
+      msg = stub_msg;
+    snprintf(err_msg, MSG_LEN_LONG, "locking %s in method %s-%s", pa->ai_qs.parent_id, id, msg);
+    log_record(PBSEVENT_DEBUG, PBS_EVENTCLASS_NODE, id, err_msg);
+    }
+
+  clock_gettime(CLOCK_REALTIME, &abs_time);
+  abs_time.tv_nsec += 10 * 1000000;
+  mrc = pthread_mutex_timedlock(pa->ai_mutex, &abs_time);
+  if (mrc == ETIMEDOUT)
+    {
+      rc = PBSE_MUTEXTIMED;
+    }
+  else if (mrc != 0)
     {
     if (logging >= 10)
       {

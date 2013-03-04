@@ -5,9 +5,11 @@
 #include "array.h"
 
 int lock_ji_mutex(job *, const char *, char *, int);
+int lock_ji_mutex_timed(job *, const char *, char *, int);
 int unlock_ji_mutex(job *, const char *, char *, int);
 
 int lock_ai_mutex(job_array *, const char *, char *, int);
+int lock_ai_mutex_timed(job_array *, const char *, char *, int);
 int unlock_ai_mutex(job_array *, const char *, char *, int);
 
 int lock_alljobs_mutex(struct all_jobs*, const char *, char *, int);

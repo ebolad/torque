@@ -155,15 +155,32 @@ job_array *get_array(
 
   {
   job_array *pa;
-  
-  pthread_mutex_lock(allarrays.allarrays_mutex);
+  int rc = 0;
+  useconds_t usec = 1;
 
-  pa = (job_array *)get_from_hash_map(allarrays.hm, id);
+  while(TRUE)
+    {
+    pthread_mutex_lock(allarrays.allarrays_mutex);
 
-  if (pa != NULL)
-    lock_ai_mutex(pa, __func__, NULL, LOGLEVEL);
+    pa = (job_array *)get_from_hash_map(allarrays.hm, id);
 
-  pthread_mutex_unlock(allarrays.allarrays_mutex);
+    if (pa != NULL)
+      {
+      rc = lock_ai_mutex_timed(pa, __func__, NULL, LOGLEVEL);
+      if (rc == PBSE_MUTEXTIMED)
+        {
+        pthread_mutex_unlock(allarrays.allarrays_mutex);
+        usleep(usec);
+        usec *= 2;
+        if (usec > 2000000)
+          usec = 2000000;
+        continue;
+        }
+      }
+
+    pthread_mutex_unlock(allarrays.allarrays_mutex);
+    break;
+    }
 
   return(pa);
   } /* END get_array() */
@@ -1835,6 +1852,8 @@ int remove_array(
   {
   int  rc;
   char arrayid[PBS_MAXSVRJOBID+1];
+  int mrc = 0;
+  useconds_t usec = 1;
 
   if (pthread_mutex_trylock(allarrays.allarrays_mutex))
     {
@@ -1869,15 +1888,32 @@ job_array *next_array(
 
   {
   job_array *pa = NULL;
+  int rc = 0;
+  useconds_t usec = 1;
 
-  pthread_mutex_lock(allarrays.allarrays_mutex);
+  while(TRUE)
+    {
+    pthread_mutex_lock(allarrays.allarrays_mutex);
 
-  pa = (job_array *)next_from_hash_map(allarrays.hm, iter);
-  
-  if (pa != NULL)
-    lock_ai_mutex(pa, __func__, NULL, LOGLEVEL);
+    pa = (job_array *)next_from_hash_map(allarrays.hm, iter);
 
-  pthread_mutex_unlock(allarrays.allarrays_mutex);
+    if (pa != NULL)
+      {
+      rc = lock_ai_mutex_timed(pa, __func__, NULL, LOGLEVEL);
+      if (rc == PBSE_MUTEXTIMED)
+        {
+        pthread_mutex_unlock(allarrays.allarrays_mutex);
+        usleep(usec);
+        usec *= 2;
+        if (usec > 2000000)
+          usec = 2000000;
+        continue;
+        }
+      }
+
+    pthread_mutex_unlock(allarrays.allarrays_mutex);
+    break;
+    }
 
   return(pa);
   } /* END next_array() */
@@ -1893,14 +1929,33 @@ job_array *next_array_check(
   {
   job_array *pa = NULL;
 
-  pthread_mutex_lock(allarrays.allarrays_mutex);
-  pa = (job_array *)next_from_hash_map(allarrays.hm, iter);
+  int rc = 0;
+  useconds_t usec = 1;
 
-  if ((pa != NULL) &&
-      (pa != owned))
-    lock_ai_mutex(pa, __func__, NULL, LOGLEVEL);
-  
-  pthread_mutex_unlock(allarrays.allarrays_mutex);
+  while(TRUE)
+    {
+    pthread_mutex_lock(allarrays.allarrays_mutex);
+
+    pa = (job_array *)next_from_hash_map(allarrays.hm, iter);
+
+    if ((pa != NULL) &&
+        (pa != owned))
+      {
+      rc = lock_ai_mutex_timed(pa, __func__, NULL, LOGLEVEL);
+      if (rc == PBSE_MUTEXTIMED)
+        {
+        pthread_mutex_unlock(allarrays.allarrays_mutex);
+        usleep(usec);
+        usec *= 2;
+        if (usec > 2000000)
+          usec = 2000000;
+        continue;
+        }
+      }
+
+    pthread_mutex_unlock(allarrays.allarrays_mutex);
+    break;
+    }
 
   return(pa);
   } /* END next_array_check() */
