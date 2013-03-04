@@ -1,0 +1,698 @@
+Description: Upstream changes introduced in version 4.1.4~20130110
+ This patch has been created by dpkg-source during the package build.
+ Here's the last changelog entry, hopefully it gives details on why
+ those changes were made:
+ .
+ torque (4.1.4~20130110) squeeze; urgency=low
+ .
+   * New upstream version
+ .
+ The person named in the Author field signed this changelog entry.
+Author: Joerg Blank <j.blank@fz-juelich.de>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- torque-4.1.4~20130110.orig/src/include/pbs_error_db.h
++++ torque-4.1.4~20130110/src/include/pbs_error_db.h
+@@ -251,6 +251,7 @@ PbsErrClient(PBSE_JOBSUBSTATE, "Current
+ PbsErrClient(PBSE_CAN_NOT_MOVE_FILE, "Error moving file")
+ PbsErrClient(PBSE_JOB_RECYCLED,      "Job is being recycled")
+ PbsErrClient(PBSE_JOB_ALREADY_IN_QUEUE, "Job is already in destination queue.")
++PbsErrClient(PBSE_MUTEXTIMED, "MUTEX AQUIRE TIMEOUT")
+ 
+ 
+ /* pbs client errors ceiling (max_client_err + 1) */
+--- torque-4.1.4~20130110.orig/src/server/svr_jobfunc.c
++++ torque-4.1.4~20130110/src/server/svr_jobfunc.c
+@@ -2878,6 +2878,52 @@ int lock_ji_mutex(
+   }
+ 
+ 
++int lock_ji_mutex_timed(
++
++  job        *pjob,
++  const char *id,
++  char       *msg,
++  int        logging)
++  {
++  int rc = PBSE_NONE;
++  char *err_msg = NULL;
++  char stub_msg[] = "no pos";
++  int mrc = 0;
++  struct timespec abs_time;
++
++  if (logging >= 10)
++    {
++    err_msg = (char *)calloc(1, MSG_LEN_LONG);
++    if (msg == NULL)
++      msg = stub_msg;
++    snprintf(err_msg, MSG_LEN_LONG, "locking %s in method %s-%s", pjob->ji_qs.ji_jobid, id, msg);
++    log_record(PBSEVENT_DEBUG, PBS_EVENTCLASS_NODE, id, err_msg);
++    }
++
++  clock_gettime(CLOCK_REALTIME, &abs_time);
++  abs_time.tv_nsec += 10 * 1000000;
++  mrc = pthread_mutex_timedlock(pjob->ji_mutex, &abs_time);
++  if (mrc == ETIMEDOUT)
++    {
++      rc = PBSE_MUTEXTIMED;
++    }
++  if (mrc != 0)
++    {
++    if (logging >= 10)
++      {
++      snprintf(err_msg, MSG_LEN_LONG, "ALERT: cannot lock job %s mutex in method %s",
++                                   pjob->ji_qs.ji_jobid, id);
++      log_record(PBSEVENT_DEBUG, PBS_EVENTCLASS_NODE, id, err_msg);
++      }
++    rc = PBSE_MUTEX;
++    }
++
++  if (err_msg != NULL)
++  free(err_msg);
++
++  return rc;
++  }
++
+ 
+ int unlock_ji_mutex(
+ 
+@@ -2941,6 +2987,52 @@ int lock_ai_mutex(
+     {
+     if (logging >= 10)
+       {
++      snprintf(err_msg, MSG_LEN_LONG, "ALERT: cannot lock job array %s mutex in method %s",
++                                   pa->ai_qs.parent_id, id);
++      log_record(PBSEVENT_DEBUG, PBS_EVENTCLASS_NODE, id, err_msg);
++      }
++    rc = PBSE_MUTEX;
++    }
++
++  if (err_msg != NULL)
++  free(err_msg);
++
++  return rc;
++  }
++
++int lock_ai_mutex_timed(
++
++  job_array  *pa,
++  const char *id,
++  char       *msg,
++  int        logging)
++  {
++  int rc = PBSE_NONE;
++  char *err_msg = NULL;
++  char stub_msg[] = "no pos";
++  int mrc = 0;
++  struct timespec abs_time;
++
++  if (logging >= 10)
++    {
++    err_msg = (char *)calloc(1, MSG_LEN_LONG);
++    if (msg == NULL)
++      msg = stub_msg;
++    snprintf(err_msg, MSG_LEN_LONG, "locking %s in method %s-%s", pa->ai_qs.parent_id, id, msg);
++    log_record(PBSEVENT_DEBUG, PBS_EVENTCLASS_NODE, id, err_msg);
++    }
++
++  clock_gettime(CLOCK_REALTIME, &abs_time);
++  abs_time.tv_nsec += 10 * 1000000;
++  mrc = pthread_mutex_timedlock(pa->ai_mutex, &abs_time);
++  if (mrc == ETIMEDOUT)
++    {
++      rc = PBSE_MUTEXTIMED;
++    }
++  else if (mrc != 0)
++    {
++    if (logging >= 10)
++      {
+       snprintf(err_msg, MSG_LEN_LONG, "ALERT: cannot lock job array %s mutex in method %s",
+                                    pa->ai_qs.parent_id, id);
+       log_record(PBSEVENT_DEBUG, PBS_EVENTCLASS_NODE, id, err_msg);
+--- torque-4.1.4~20130110.orig/src/server/array_func.c
++++ torque-4.1.4~20130110/src/server/array_func.c
+@@ -155,15 +155,32 @@ job_array *get_array(
+ 
+   {
+   job_array *pa;
+-  
+-  pthread_mutex_lock(allarrays.allarrays_mutex);
++  int rc = 0;
++  useconds_t usec = 1;
+ 
+-  pa = (job_array *)get_from_hash_map(allarrays.hm, id);
++  while(TRUE)
++    {
++    pthread_mutex_lock(allarrays.allarrays_mutex);
+ 
+-  if (pa != NULL)
+-    lock_ai_mutex(pa, __func__, NULL, LOGLEVEL);
++    pa = (job_array *)get_from_hash_map(allarrays.hm, id);
+ 
+-  pthread_mutex_unlock(allarrays.allarrays_mutex);
++    if (pa != NULL)
++      {
++      rc = lock_ai_mutex_timed(pa, __func__, NULL, LOGLEVEL);
++      if (rc == PBSE_MUTEXTIMED)
++        {
++        pthread_mutex_unlock(allarrays.allarrays_mutex);
++        usleep(usec);
++        usec *= 2;
++        if (usec > 2000000)
++          usec = 2000000;
++        continue;
++        }
++      }
++
++    pthread_mutex_unlock(allarrays.allarrays_mutex);
++    break;
++    }
+ 
+   return(pa);
+   } /* END get_array() */
+@@ -1835,6 +1852,8 @@ int remove_array(
+   {
+   int  rc;
+   char arrayid[PBS_MAXSVRJOBID+1];
++  int mrc = 0;
++  useconds_t usec = 1;
+ 
+   if (pthread_mutex_trylock(allarrays.allarrays_mutex))
+     {
+@@ -1869,15 +1888,32 @@ job_array *next_array(
+ 
+   {
+   job_array *pa = NULL;
++  int rc = 0;
++  useconds_t usec = 1;
+ 
+-  pthread_mutex_lock(allarrays.allarrays_mutex);
++  while(TRUE)
++    {
++    pthread_mutex_lock(allarrays.allarrays_mutex);
+ 
+-  pa = (job_array *)next_from_hash_map(allarrays.hm, iter);
+-  
+-  if (pa != NULL)
+-    lock_ai_mutex(pa, __func__, NULL, LOGLEVEL);
++    pa = (job_array *)next_from_hash_map(allarrays.hm, iter);
+ 
+-  pthread_mutex_unlock(allarrays.allarrays_mutex);
++    if (pa != NULL)
++      {
++      rc = lock_ai_mutex_timed(pa, __func__, NULL, LOGLEVEL);
++      if (rc == PBSE_MUTEXTIMED)
++        {
++        pthread_mutex_unlock(allarrays.allarrays_mutex);
++        usleep(usec);
++        usec *= 2;
++        if (usec > 2000000)
++          usec = 2000000;
++        continue;
++        }
++      }
++
++    pthread_mutex_unlock(allarrays.allarrays_mutex);
++    break;
++    }
+ 
+   return(pa);
+   } /* END next_array() */
+@@ -1893,14 +1929,33 @@ job_array *next_array_check(
+   {
+   job_array *pa = NULL;
+ 
+-  pthread_mutex_lock(allarrays.allarrays_mutex);
+-  pa = (job_array *)next_from_hash_map(allarrays.hm, iter);
++  int rc = 0;
++  useconds_t usec = 1;
+ 
+-  if ((pa != NULL) &&
+-      (pa != owned))
+-    lock_ai_mutex(pa, __func__, NULL, LOGLEVEL);
+-  
+-  pthread_mutex_unlock(allarrays.allarrays_mutex);
++  while(TRUE)
++    {
++    pthread_mutex_lock(allarrays.allarrays_mutex);
++
++    pa = (job_array *)next_from_hash_map(allarrays.hm, iter);
++
++    if ((pa != NULL) &&
++        (pa != owned))
++      {
++      rc = lock_ai_mutex_timed(pa, __func__, NULL, LOGLEVEL);
++      if (rc == PBSE_MUTEXTIMED)
++        {
++        pthread_mutex_unlock(allarrays.allarrays_mutex);
++        usleep(usec);
++        usec *= 2;
++        if (usec > 2000000)
++          usec = 2000000;
++        continue;
++        }
++      }
++
++    pthread_mutex_unlock(allarrays.allarrays_mutex);
++    break;
++    }
+ 
+   return(pa);
+   } /* END next_array_check() */
+--- torque-4.1.4~20130110.orig/src/server/ji_mutex.h
++++ torque-4.1.4~20130110/src/server/ji_mutex.h
+@@ -5,9 +5,11 @@
+ #include "array.h"
+ 
+ int lock_ji_mutex(job *, const char *, char *, int);
++int lock_ji_mutex_timed(job *, const char *, char *, int);
+ int unlock_ji_mutex(job *, const char *, char *, int);
+ 
+ int lock_ai_mutex(job_array *, const char *, char *, int);
++int lock_ai_mutex_timed(job_array *, const char *, char *, int);
+ int unlock_ai_mutex(job_array *, const char *, char *, int);
+ 
+ int lock_alljobs_mutex(struct all_jobs*, const char *, char *, int);
+--- torque-4.1.4~20130110.orig/src/server/job_func.c
++++ torque-4.1.4~20130110/src/server/job_func.c
+@@ -2550,6 +2550,8 @@ int  remove_job(
+   int rc = PBSE_NONE;
+   int index;
+   char log_buf[LOCAL_LOG_BUF_SIZE];
++  int mrc = 0;
++  useconds_t usec = 1;
+ 
+   if (LOGLEVEL >= 10)
+     log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, __func__, pjob->ji_qs.ji_jobid);
+@@ -2558,8 +2560,21 @@ int  remove_job(
+   if (rc != 0)
+     {
+     unlock_ji_mutex(pjob, __func__, "1", LOGLEVEL);
+-    lock_alljobs_mutex(aj, __func__, NULL, LOGLEVEL);
+-    lock_ji_mutex(pjob, __func__, NULL, LOGLEVEL);
++    while(TRUE)
++      {
++      lock_alljobs_mutex(aj, __func__, NULL, LOGLEVEL);
++      rc = lock_ji_mutex_timed(pjob, __func__, NULL, LOGLEVEL);
++      if (rc == PBSE_MUTEXTIMED)
++        {
++        unlock_alljobs_mutex(aj, __func__, NULL, LOGLEVEL);
++        usleep(usec);
++        usec *= 2;
++        if (usec > 2000000)
++          usec = 2000000;
++        continue;
++        }
++      break;
++      }
+ 
+     if (LOGLEVEL >= 7)
+       {
+--- /dev/null
++++ torque-4.1.4~20130110/mybuild/config.log
+@@ -0,0 +1,373 @@
++This file contains any messages produced by compilers while
++running configure, to aid debugging if configure makes a mistake.
++
++It was created by torque configure 4.1.4, which was
++generated by GNU Autoconf 2.59.  Invocation command line was
++
++  $ ../configure --with-sched=no --enable-debug
++
++## --------- ##
++## Platform. ##
++## --------- ##
++
++hostname = glorim-1
++uname -m = x86_64
++uname -r = 2.6.32-5-amd64
++uname -s = Linux
++uname -v = #1 SMP Sun Sep 23 10:07:46 UTC 2012
++
++/usr/bin/uname -p = unknown
++/bin/uname -X     = unknown
++
++/bin/arch              = unknown
++/usr/bin/arch -k       = unknown
++/usr/convex/getsysinfo = unknown
++hostinfo               = unknown
++/bin/machine           = unknown
++/usr/bin/oslevel       = unknown
++/bin/universe          = unknown
++
++PATH: /usr/lib/ccache
++PATH: /share/apps/gcc-4.7/bin
++PATH: /share/apps/jurassic-2.9-glorim2-beta/bin
++PATH: /usr/local/bin
++PATH: /usr/bin
++PATH: /bin
++PATH: /usr/bin/X11
++PATH: /usr/games
++PATH: /home/joergb/bin
++
++
++## ----------- ##
++## Core tests. ##
++## ----------- ##
++
++configure:1787: checking build system type
++configure:1805: result: x86_64-unknown-linux-gnu
++configure:1813: checking host system type
++configure:1827: result: x86_64-unknown-linux-gnu
++configure:1854: checking for make
++configure:1870: found /usr/bin/make
++configure:1880: result: make
++configure:1911: checking for a BSD-compatible install
++configure:1966: result: /usr/bin/install -c
++configure:1977: checking whether build environment is sane
++configure:2020: result: yes
++configure:2085: checking for gawk
++configure:2101: found /usr/bin/gawk
++configure:2111: result: gawk
++configure:2121: checking whether make sets $(MAKE)
++configure:2141: result: yes
++configure:2162: error: source directory already configured; run "make distclean" there first
++
++## ---------------- ##
++## Cache variables. ##
++## ---------------- ##
++
++ac_cv_build=x86_64-unknown-linux-gnu
++ac_cv_build_alias=x86_64-unknown-linux-gnu
++ac_cv_env_CC_set=
++ac_cv_env_CC_value=
++ac_cv_env_CFLAGS_set=
++ac_cv_env_CFLAGS_value=
++ac_cv_env_CHECK_CFLAGS_set=
++ac_cv_env_CHECK_CFLAGS_value=
++ac_cv_env_CHECK_LIBS_set=
++ac_cv_env_CHECK_LIBS_value=
++ac_cv_env_CPPFLAGS_set=
++ac_cv_env_CPPFLAGS_value=
++ac_cv_env_CPP_set=
++ac_cv_env_CPP_value=
++ac_cv_env_CXXCPP_set=
++ac_cv_env_CXXCPP_value=
++ac_cv_env_CXXFLAGS_set=
++ac_cv_env_CXXFLAGS_value=
++ac_cv_env_CXX_set=
++ac_cv_env_CXX_value=
++ac_cv_env_F77_set=
++ac_cv_env_F77_value=
++ac_cv_env_FFLAGS_set=
++ac_cv_env_FFLAGS_value=
++ac_cv_env_HWLOC_CFLAGS_set=
++ac_cv_env_HWLOC_CFLAGS_value=
++ac_cv_env_HWLOC_LIBS_set=
++ac_cv_env_HWLOC_LIBS_value=
++ac_cv_env_LDFLAGS_set=
++ac_cv_env_LDFLAGS_value=
++ac_cv_env_PKG_CONFIG_set=
++ac_cv_env_PKG_CONFIG_value=
++ac_cv_env_build_alias_set=
++ac_cv_env_build_alias_value=
++ac_cv_env_host_alias_set=
++ac_cv_env_host_alias_value=
++ac_cv_env_target_alias_set=
++ac_cv_env_target_alias_value=
++ac_cv_host=x86_64-unknown-linux-gnu
++ac_cv_host_alias=x86_64-unknown-linux-gnu
++ac_cv_path_install='/usr/bin/install -c'
++ac_cv_prog_AWK=gawk
++ac_cv_prog_MAKE=make
++ac_cv_prog_make_make_set=yes
++
++## ----------------- ##
++## Output variables. ##
++## ----------------- ##
++
++ACLOCAL=''
++ALPS_LIBS=''
++AMDEPBACKSLASH=''
++AMDEP_FALSE=''
++AMDEP_TRUE=''
++AMTAR=''
++AR=''
++AUTOCONF=''
++AUTOHEADER=''
++AUTOMAKE=''
++AWK='gawk'
++BLCR_BINDIR=''
++BLCR_CPPFLAGS=''
++BLCR_LDFLAGS=''
++BUILDCPA_FALSE=''
++BUILDCPA_TRUE=''
++BUILD_L26_CPUSETS_FALSE=''
++BUILD_L26_CPUSETS_TRUE=''
++CC=''
++CCDEPMODE=''
++CFLAGS=''
++CHECK_CFLAGS=''
++CHECK_LIBS=''
++CPP=''
++CPPFLAGS=''
++CXX=''
++CXXCPP=''
++CXXDEPMODE=''
++CXXFLAGS=''
++CYGPATH=''
++CYGPATH_W=''
++DEFS=''
++DEPDIR=''
++DOXYGEN=''
++DRMAA_DOCS_FALSE=''
++DRMAA_DOCS_TRUE=''
++ECHO='echo'
++ECHO_C=''
++ECHO_N='-n'
++ECHO_T=''
++EGREP=''
++EXEEXT=''
++EXTRA_QSTAT_LIBS=''
++F77=''
++FFLAGS=''
++GENERIC_CONFIG=''
++GPERF=''
++HAVE_CHECK_FALSE=''
++HAVE_CHECK_TRUE=''
++HAVE_CR_RESTART=''
++HAVE_DOT=''
++HWLOC_CFLAGS=''
++HWLOC_LIBS=''
++INCLUDE_CLIENTS_FALSE=''
++INCLUDE_CLIENTS_TRUE=''
++INCLUDE_DRMAA_FALSE=''
++INCLUDE_DRMAA_TRUE=''
++INCLUDE_GUI_FALSE=''
++INCLUDE_GUI_TRUE=''
++INCLUDE_MOM_FALSE=''
++INCLUDE_MOM_RCP_FALSE=''
++INCLUDE_MOM_RCP_TRUE=''
++INCLUDE_MOM_TRUE=''
++INCLUDE_PAM_FALSE=''
++INCLUDE_PAM_TRUE=''
++INCLUDE_SERVER_FALSE=''
++INCLUDE_SERVER_TRUE=''
++INSTALL_DATA='${INSTALL} -m 644'
++INSTALL_MODULEFILES_FALSE=''
++INSTALL_MODULEFILES_TRUE=''
++INSTALL_PROGRAM='${INSTALL}'
++INSTALL_SCRIPT='${INSTALL}'
++INSTALL_STRIP_PROGRAM=''
++LDFLAGS=''
++LEX=''
++LEXLIB=''
++LEX_OUTPUT_ROOT=''
++LIBOBJS=''
++LIBS=''
++LIBTOOL=''
++LN_S=''
++LTLIBOBJS=''
++MAINT=''
++MAINTAINER_MODE_FALSE=''
++MAINTAINER_MODE_TRUE=''
++MAKE='make'
++MAKEINFO=''
++MODULEFILES_DIR=''
++MOMLIBS=''
++MY_TCLTK_INCS=''
++MY_TCLTK_LIBS=''
++MY_TCL_INCS=''
++MY_TCL_LIBS=''
++OBJEXT=''
++PACKAGE=''
++PACKAGE_BUGREPORT='torqueusers@supercluster.org'
++PACKAGE_NAME='torque'
++PACKAGE_STRING='torque 4.1.4'
++PACKAGE_TARNAME='torque'
++PACKAGE_VERSION='4.1.4'
++PATH_SEPARATOR=':'
++PBSPOE=''
++PBSPOEO=''
++PBS_DEFAULT_FILE=''
++PBS_DEFAULT_SERVER=''
++PBS_ENVIRON=''
++PBS_MACH=''
++PBS_SERVER_HOME=''
++PIC=''
++PKG_CONFIG=''
++PTHREAD_CFLAGS=''
++PTHREAD_LIBS=''
++RANLIB=''
++RCP_ARGS=''
++RCP_PATH=''
++READLINE_LIBS=''
++ROFF=''
++RPM_AC_OPTS=''
++RSH_PATH=''
++SCHD_BASL_FALSE=''
++SCHD_BASL_TRUE=''
++SCHD_CODE=''
++SCHD_LIBS=''
++SCHD_TYPE=''
++SCHD_TYPE_SUBDIR=''
++SED=''
++SENDMAIL_CMD=''
++SET_MAKE=''
++SHELL='/bin/bash'
++SPEC_NAME=''
++SPEC_VERSION=''
++STRIP=''
++TBL=''
++TCLSH_PROG=''
++TCL_BIN_DIR=''
++TCL_DEFS=''
++TCL_EXTRA_CFLAGS=''
++TCL_INCLUDES=''
++TCL_LD_FLAGS=''
++TCL_LIBS=''
++TCL_LIB_FILE=''
++TCL_LIB_FLAG=''
++TCL_LIB_SPEC=''
++TCL_SHLIB_LD_LIBS=''
++TCL_SRC_DIR=''
++TCL_STUB_LIB_FILE=''
++TCL_STUB_LIB_FLAG=''
++TCL_STUB_LIB_SPEC=''
++TCL_VERSION=''
++TK_BIN_DIR=''
++TK_INCLUDES=''
++TK_LIBS=''
++TK_LIB_FILE=''
++TK_LIB_FLAG=''
++TK_LIB_SPEC=''
++TK_SRC_DIR=''
++TK_STUB_LIB_FILE=''
++TK_STUB_LIB_FLAG=''
++TK_STUB_LIB_SPEC=''
++TK_VERSION=''
++TK_XINCLUDES=''
++USE_TCLQSTAT_FALSE=''
++USE_TCLQSTAT_TRUE=''
++USING_SYSLOG_FALSE=''
++USING_SYSLOG_TRUE=''
++USING_TCL_FALSE=''
++USING_TCL_TRUE=''
++USING_TK_FALSE=''
++USING_TK_TRUE=''
++VERSION=''
++WISH_PROG=''
++YACC=''
++ac_ct_AR=''
++ac_ct_CC=''
++ac_ct_CXX=''
++ac_ct_F77=''
++ac_ct_RANLIB=''
++ac_ct_STRIP=''
++ac_pt_PKG_CONFIG=''
++acx_pthread_config=''
++am__fastdepCC_FALSE=''
++am__fastdepCC_TRUE=''
++am__fastdepCXX_FALSE=''
++am__fastdepCXX_TRUE=''
++am__include=''
++am__leading_dot='.'
++am__quote=''
++am__tar=''
++am__untar=''
++bindir='${exec_prefix}/bin'
++build='x86_64-unknown-linux-gnu'
++build_alias=''
++build_clients=''
++build_cpu='x86_64'
++build_drmaa=''
++build_drmaa_docs=''
++build_gui=''
++build_mom=''
++build_os='linux-gnu'
++build_pbs_rcp=''
++build_server=''
++build_vendor='unknown'
++datadir='${prefix}/share'
++drmaadocdir=''
++exec_prefix='NONE'
++have_loadlibfile=''
++host='x86_64-unknown-linux-gnu'
++host_alias=''
++host_cpu='x86_64'
++host_os='linux-gnu'
++host_vendor='unknown'
++includedir='${prefix}/include'
++infodir='${prefix}/info'
++install_sh=''
++libdir='${exec_prefix}/lib'
++libexecdir='${exec_prefix}/libexec'
++localstatedir='${prefix}/var'
++mandir='${prefix}/man'
++mkdir_p='mkdir -p --'
++oldincludedir='/usr/include'
++pammoddir=''
++prefix='NONE'
++program_prefix='NONE'
++program_suffix='NONE'
++program_transform_name='s,x,x,'
++sbindir='${exec_prefix}/sbin'
++sharedstatedir='${prefix}/com'
++sysconfdir='${prefix}/etc'
++target_alias=''
++tclx_LIB_FILE=''
++tclx_LIB_SPEC=''
++tclx_SRC_DIR=''
++tclx_STUB_LIB_FILE=''
++tclx_STUB_LIB_PATH=''
++tclx_STUB_LIB_SPEC=''
++tclx_VERSION=''
++tkx_LIB_FILE=''
++tkx_LIB_SPEC=''
++tkx_SRC_DIR=''
++tkx_STUB_LIB_FILE=''
++tkx_STUB_LIB_PATH=''
++tkx_STUB_LIB_SPEC=''
++tkx_VERSION=''
++use_tcl=''
++use_tk=''
++xauth_path=''
++
++## ----------- ##
++## confdefs.h. ##
++## ----------- ##
++
++#define PACKAGE_BUGREPORT "torqueusers@supercluster.org"
++#define PACKAGE_NAME "torque"
++#define PACKAGE_STRING "torque 4.1.4"
++#define PACKAGE_TARNAME "torque"
++#define PACKAGE_VERSION "4.1.4"
++
++configure: exit 1

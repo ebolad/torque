@@ -1,0 +1,65 @@
+Description: Upstream changes introduced in version 4.0.1~20120404
+ This patch has been created by dpkg-source during the package build.
+ Here's the last changelog entry, hopefully it gives details on why
+ those changes were made:
+ .
+ torque (4.0.1~20120404) squeeze; urgency=low
+ .
+   * New upstream version
+ .
+ The person named in the Author field signed this changelog entry.
+Author: Joerg Blank <j.blank@fz-juelich.de>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- /dev/null
++++ torque-4.0.1~20120404/stuff
+@@ -0,0 +1,37 @@
++acinclude.m4
++aclocal.m4
++autogen.sh
++buildutils
++CHANGELOG
++config.log
++config.status
++configure
++configure.ac
++contrib
++cov_file_results.pl
++debian
++doc
++Doxyfile
++INSTALL
++INSTALL.GNU
++libtool
++Makefile
++Makefile.am
++Makefile.in
++parse_cov_results.pl
++pbs-config
++PBS_License.txt
++README.array_changes
++README.building_40
++README.coding_notes
++README.configure
++README.cygwin
++README.NUMA
++README.torque
++README.trqauthd
++Release_Notes
++run_report.pl
++src
++stuff
++torque.setup
++torque.spec

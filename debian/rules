@@ -1,0 +1,44 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+#
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+#
+# Modified to make a template file for a multi-binary package with separated
+# build-arch and build-indep targets  by Bill Allombert 2001
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS
+
+
+%:
+	dh $@ 
+
+override_dh_auto_configure:
+#	./configure --with-sched=no --enable-numa-support --build=x86_64-linux-gnu --prefix=/usr --includedir=/usr/include --mandir=/usr/share/man --infodir=/usr/share/info --sysconfdir=/etc --localstatedir=/var --libexecdir=/usr/lib/torque --disable-maintainer-mode --disable-dependency-tracking
+#   --enable-cpuset --enable-libcpuset 
+	dh_auto_configure -- --with-sched=no --enable-debug
+# --enable-cpuset
+# --enable-numa-support
+
+override_dh_fixperms:
+	dh_fixperms -Xspool
+# chmod 1777 debian/tmp/var/spool/torque/spool
+
+override_dh_install:
+	dh_install
+	mkdir -p $(CURDIR)/debian/torque4-common/etc/torque
+	mv $(CURDIR)/debian/torque4-common/var/spool/torque/server_name $(CURDIR)/debian/torque4-common/etc/torque
+	ln -s /etc/torque/server_name $(CURDIR)/debian/torque4-common/var/spool/torque/server_name
+	# mv $(CURDIR)/debian/torque4-common/var/spool/torque/pbs_environment $(CURDIR)/debian/torque4-common/etc/torque
+	# ln -s /etc/torque/pbs_environment $(CURDIR)/debian/torque4-common/var/spool/torque/pbs_environment
+	mv $(CURDIR)/debian/torque4-common/var/spool/torque/server_priv/nodes $(CURDIR)/debian/torque4-common/etc/torque
+	ln -s /etc/torque/nodes $(CURDIR)/debian/torque4-common/var/spool/torque/server_priv/nodes
+
+override_dh_strip:

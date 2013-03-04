@@ -1,0 +1,103 @@
+Format-Specification: http://wiki.debian.org/Proposals/CopyrightFormat
+Upstream-Name: TORQUE
+Upstream-Source: http://www.clusterresources.com/pages/products/torque-resource-manager.php
+Upstream-Maintainer:
+ TORQUE (Terascale Open-source Resource and QUEue manger) is an open source
+ project based on the original PBS* resource manager developed by NASA,
+ LLNL, and MRJ.  It possesses a large number of enhancements contributed by
+ organizations such as OSC, NCSA, TeraGrid, the U.S Dept of Energy, USC, and
+ many, many others.  It continues to incorporate significant advancements in
+ the areas of scalability, fault-tolerance, usability, functionality, and
+ security development from the community and vendor supporters.  It may be
+ utilized, modified, and distributed subject to the constraints of the
+ license located in the PBS_License.txt file.  If you would like to
+ contribute to this project or have patches, enhancements, or associated
+ projects you would like to have included in this project, please send email
+ to help@supercluster.org
+
+Files: *
+Copyright: © 2010-2011 Adaptive Computing Enterprises, Inc. All rights reserved.
+License:
+ This license covers use of the TORQUE v2.5 software (the "Software") at your site or 
+ location, and, for certain users, redistribution of the Software to other sites and 
+ locations.  Later versions of TORQUE are also covered by this license. 
+ Use and redistribution of TORQUE v2.5 in source and binary forms, with or without 
+ modification, are permitted provided that all of the following conditions are met. 
+
+ 1.  Any Redistribution of source code must retain the above copyright notice and the 
+     acknowledgment contained in paragraph 5, this list of conditions and the disclaimer 
+     contained in paragraph 5. 
+
+ 2.  Any Redistribution in binary form must reproduce the above copyright notice and the 
+     acknowledgment contained in paragraph 4, this list of conditions and the disclaimer 
+     contained in paragraph 5 in the documentation and/or other materials provided with 
+     the distribution. 
+
+ 3.  Redistributions in any form must be accompanied by information on how to obtain 
+     complete source code for TORQUE and any modifications and/or additions to 
+     TORQUE. The source code must either be included in the distribution or be available 
+     for no more than the cost of distribution plus a nominal fee, and all modifications and 
+     additions to the Software must be freely redistributable by any party (including 
+     Licensor) without restriction. 
+
+ 4.  All advertising materials mentioning features or use of the Software must display the 
+     following acknowledgment: 
+
+       "TORQUE is a modification of OpenPBS which was developed by NASA Ames 
+        Research Center, Lawrence Livermore National Laboratory, and Veridian 
+        Information Solutions, Inc. Visit www.clusterresources.com/products/ for more 
+        information about TORQUE and to download TORQUE. 
+
+        For information about Moab branded products and so receive support from Adaptive 
+        Computing for TORQUE, see www.adaptivecomputing.com.” 
+
+ 5. DISCLAIMER OF WARRANTY 
+
+      THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. 
+      ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, 
+      THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
+      PARTICULAR PURPOSE, AND NON-INFRINGEMENT ARE EXPRESSLY 
+      DISCLAIMED. 
+
+      IN NO EVENT SHALL ADAPTIVE COMPUTING ENTERPRISES, INC. 
+      CORPORATION, ITS AFFILIATED COMPANIES, OR THE U.S. GOVERNMENT OR 
+      ANY OF ITS AGENCIES BE LIABLE FOR ANY DIRECT OR INDIRECT, 
+      INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
+      (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
+      OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
+      HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+      CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
+      OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+      EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+
+ This license will be governed by the laws of Utah, without reference to its choice of law 
+ rules. 
+
+ Note 1: TORQUE is developed from an earlier version v2.3 of OpenPBS. TORQUE has 
+ been developed beyond OpenPBS v2.3. The OpenPBS v2.3 license and OpenPBS software 
+ can be obtained at: 
+
+ http://www.pbsworks.com/ResLibSearchResult.aspx?keywords=openpbs&industry=All&pro 
+ duct_service=All&category=Free%20Software%20Downloads&order_by=title. Users of 
+ TORQUE should comply with the TORQUE license as well as the OpenPBS license. 
+
+Files: debian/*
+Copyright: © 2012 Joerg Blank <joerg.blank@4geeks.de>
+License: GPL-3
+ The packaging of Torque is licensed as free software: you can redistribute
+ it and/or modify it under the terms of the GNU General Public License as
+ published by the Free Software Foundation, either version 3 of the License,
+ or (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+X-Comment: On a Debian system, the full text of the GPL-3 license can be
+ found in /usr/share/common-licenses/GPL-3. Upstream at supercluster.com
+ supports the packaging and the redistribution of Torque. They consider
+ it "community-maintained".

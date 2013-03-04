@@ -1,0 +1,17 @@
+torque (4.1.4~20130110) squeeze; urgency=low
+
+  * New upstream version
+
+ -- Joerg Blank <j.blank@fz-juelich.de>  Thu, 10 Jan 2013 11:10:43 +0100
+
+torque (4.0.1~20120404) squeeze; urgency=low
+
+  * New upstream version
+
+ -- Joerg Blank <j.blank@fz-juelich.de>  Wed, 04 Apr 2012 15:39:27 +0200
+
+torque (4.0.0~20120206) squeeze; urgency=low
+
+  * Initial release
+
+ -- Joerg Blank <j.blank@fz-juelich.de>  Sat, 07 Jan 2012 12:22:52 +0100

@@ -1,0 +1,94 @@
+Source: torque
+Section: main
+Priority: extra
+Maintainer: Joerg Blank <j.blank@fz-juelich.de>
+Build-Depends: debhelper (>= 7.0.50~), autotools-dev
+Standards-Version: 3.8.4
+Homepage: http://www.adaptivecomputing.com/products/torque.php
+#Vcs-Git: git://git.debian.org/collab-maint/torque.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/torque.git;a=summary
+
+Package: torque4-common
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: TORQUE (Terascale Open-source Resource and QUEue manger)
+ TORQUE (Terascale Open-source Resource and QUEue manger) is an open source
+ project based on the original PBS* resource manager developed by NASA,
+ LLNL, and MRJ.  It possesses a large number of enhancements contributed by
+ organizations such as OSC, NCSA, TeraGrid, the U.S Dept of Energy, USC, and
+ many, many others.  It continues to incorporate significant advancements in
+ the areas of scalability, fault-tolerance, usability, functionality, and
+ security development from the community and vendor supporters.
+
+Package: libtorque2
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: TORQUE (Terascale Open-source Resource and QUEue manger)
+ TORQUE (Terascale Open-source Resource and QUEue manger) is an open source
+ project based on the original PBS* resource manager developed by NASA,
+ LLNL, and MRJ.  It possesses a large number of enhancements contributed by
+ organizations such as OSC, NCSA, TeraGrid, the U.S Dept of Energy, USC, and
+ many, many others.  It continues to incorporate significant advancements in
+ the areas of scalability, fault-tolerance, usability, functionality, and
+ security development from the community and vendor supporters.
+
+Package: libtorque2-dev
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, libtorque2
+Description: TORQUE (Terascale Open-source Resource and QUEue manger)
+ TORQUE (Terascale Open-source Resource and QUEue manger) is an open source
+ project based on the original PBS* resource manager developed by NASA,
+ LLNL, and MRJ.  It possesses a large number of enhancements contributed by
+ organizations such as OSC, NCSA, TeraGrid, the U.S Dept of Energy, USC, and
+ many, many others.  It continues to incorporate significant advancements in
+ the areas of scalability, fault-tolerance, usability, functionality, and
+ security development from the community and vendor supporters.
+
+Package: torque4-mom
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, libtorque2, torque4-common
+Description: TORQUE (Terascale Open-source Resource and QUEue manger)
+ TORQUE (Terascale Open-source Resource and QUEue manger) is an open source
+ project based on the original PBS* resource manager developed by NASA,
+ LLNL, and MRJ.  It possesses a large number of enhancements contributed by
+ organizations such as OSC, NCSA, TeraGrid, the U.S Dept of Energy, USC, and
+ many, many others.  It continues to incorporate significant advancements in
+ the areas of scalability, fault-tolerance, usability, functionality, and
+ security development from the community and vendor supporters.
+
+Package: torque4-auth
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, libtorque2, torque4-common
+Description: TORQUE (Terascale Open-source Resource and QUEue manger)
+ TORQUE (Terascale Open-source Resource and QUEue manger) is an open source
+ project based on the original PBS* resource manager developed by NASA,
+ LLNL, and MRJ.  It possesses a large number of enhancements contributed by
+ organizations such as OSC, NCSA, TeraGrid, the U.S Dept of Energy, USC, and
+ many, many others.  It continues to incorporate significant advancements in
+ the areas of scalability, fault-tolerance, usability, functionality, and
+ security development from the community and vendor supporters.
+
+Package: torque4
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, libtorque2, torque4-common, torque4-auth
+Description: TORQUE (Terascale Open-source Resource and QUEue manger)
+ TORQUE (Terascale Open-source Resource and QUEue manger) is an open source
+ project based on the original PBS* resource manager developed by NASA,
+ LLNL, and MRJ.  It possesses a large number of enhancements contributed by
+ organizations such as OSC, NCSA, TeraGrid, the U.S Dept of Energy, USC, and
+ many, many others.  It continues to incorporate significant advancements in
+ the areas of scalability, fault-tolerance, usability, functionality, and
+ security development from the community and vendor supporters.
+
+Package: torque4-doc
+Architecture: all
+Description: documentation for torque
+ TORQUE (Terascale Open-source Resource and QUEue manger) is an open source
+ project based on the original PBS* resource manager developed by NASA,
+ LLNL, and MRJ.  It possesses a large number of enhancements contributed by
+ organizations such as OSC, NCSA, TeraGrid, the U.S Dept of Energy, USC, and
+ many, many others.  It continues to incorporate significant advancements in
+ the areas of scalability, fault-tolerance, usability, functionality, and
+ security development from the community and vendor supporters.
+
+
