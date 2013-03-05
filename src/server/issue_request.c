@@ -169,6 +169,9 @@ int relay_to_mom(
   /* if MOM is down don't try to connect */
   addr = pjob->ji_qs.ji_un.ji_exect.ji_momaddr;
   port = pjob->ji_qs.ji_un.ji_exect.ji_momport;
+  if (pjob->ji_wattr[JOB_ATR_exec_host].at_val.at_str == NULL)
+    return PBSE_BADATVAL;
+
   job_momname = strdup(pjob->ji_wattr[JOB_ATR_exec_host].at_val.at_str);
   if (job_momname == NULL)
     return PBSE_MEM_MALLOC;

@@ -898,6 +898,11 @@ int stat_to_mom(
 
   job_momaddr = pjob->ji_qs.ji_un.ji_exect.ji_momaddr;
   job_momport = pjob->ji_qs.ji_un.ji_exect.ji_momport;
+
+  if (pjob->ji_wattr[JOB_ATR_exec_host].at_val.at_str == NULL) {
+    unlock_ji_mutex(pjob, __func__, "1", LOGLEVEL);
+    return PBSE_BADATVAL;
+  }
   job_momname = strdup(pjob->ji_wattr[JOB_ATR_exec_host].at_val.at_str);
   unlock_ji_mutex(pjob, __func__, "1", LOGLEVEL);
 
